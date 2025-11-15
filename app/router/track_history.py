@@ -90,7 +90,7 @@ def save_to_db(data, user):
     client = clientInit()
     db = client.spotify
 
-    db.track_history.insert_many(songs_df.to_dict('records'))    
+    db.track_history.insert_many(songs_df.to_dict('records')) 
 
 @router.get('/callback')
 async def callback(request: Request, code: str | None = None, error: str | None = None):

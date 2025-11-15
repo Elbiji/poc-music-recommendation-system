@@ -1,24 +1,40 @@
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 from app.config import settings 
 import urllib.parse
 import requests
+from requests.exceptions import RequestException
 
 router = APIRouter(tags=["authentication"])
 
-def getUser(access_token):
+def getUser(access_token: str):
+    if not access_token:
+        print("Error: Access token is missing")
+        return None
+
     headers = {
         'Authorization': f"Bearer {access_token}"
     }
 
-    response = requests.get(
-        settings.API_BASE_URL + "me",
-        headers=headers
-    )
+    try:
+        response = requests.get(
+            settings.API_BASE_URL + "me",
+            headers=headers
+        )
 
-    return response.json()
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 401:
+            print(f"Error: Invalid token (Status {response.status_code}).")
+            return None
+        else:
+            print(f"Error: Spotify API returned unexpected status {response.status_code}.")
+            return None
+    except RequestException as e:
+        print(f"Network error while fetching user data: {e}")
+        return None
 
-def refresh_access_token(refresh_token):
+def refresh_access_token(refresh_token: str):
     req_body = {
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token,
