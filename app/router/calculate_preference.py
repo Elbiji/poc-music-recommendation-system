@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
-from datetime import datetime
 from app.utility.client import clientInit
 from app.router.authentication import getUser
 from app.recommendation.recommendationEngine import user_preference
@@ -44,16 +43,6 @@ async def calculate_preference(user_id: str, request: Request):
     # Define the update action (e.g., set new fields or change existing ones)
     update_action = {"$set": {
         "profile_vector": user_preference_profile
-        },
-        "$setOnInsert": {
-            "user_id": user_id, 
-            "display_name": user_data.get('display_name'),
-            "explicit_content": user_data.get('explicit_content'),
-            "followers": user_data.get('followers'),
-            "type": user_data.get('type'),
-            "product": user_data.get('product'),
-            "email": user_data.get('email'),
-            "created_at": datetime.now() 
         }
     }
     

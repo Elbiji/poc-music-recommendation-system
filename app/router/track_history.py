@@ -1,10 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from app.utility.client import clientInit
-from app.router.authentication import getUser
 from app.model.songFeatures import generate_random_feature
-from app.config import settings 
+from app.config import settings
+from app.router.authentication import refresh_access_token 
+from app.dependency import get_current_user_id
+from typing import Annotated
+from datetime import datetime
 
 import pandas as pd
 import requests
@@ -54,7 +57,7 @@ async def save_to_db(data, user):
         "song_name": song_names,
         "artist_name": artist_names,
         "played_at": played_at_list,
-        "user_id": user['id'],
+        "user_id": user,
         "danceability": danceability,
         "energy": energy,
         "key": key,
@@ -92,11 +95,25 @@ async def save_to_db(data, user):
     await db.track_history.insert_many(songs_df.to_dict('records')) 
 
 @router.get('/recently-played')
-async def recently_played(request: Request):
-    access_token = request.headers.get('Authorization')
+async def recently_played(request: Request, user_id: Annotated[str, Depends(get_current_user_id)]) -> JSONResponse:
+    # Get access token from database
+    client = clientInit()
+    db = client.spotify
+    collection = db['users']
+
+    # Filter query to mongodb
+    query_filter = {"user_id": user_id}
+
+    # Get spotify's access token
+    document = await collection.find_one(query_filter)   
+    current_time_utc = datetime.utcnow()
+
+    if (current_time_utc > document['access_token_expires_at']):
+        await refresh_access_token(user_id)
+        document = await collection.find_one(query_filter)  
 
     headers = {
-        'Authorization': f"Bearer {access_token}"
+        'Authorization': f"Bearer {document['access_token']}"
     }
 
     r = requests.get(
@@ -106,7 +123,7 @@ async def recently_played(request: Request):
 
     recently_played_tracks = r.json()
 
-    await save_to_db(recently_played_tracks, getUser(access_token))
+    await save_to_db(recently_played_tracks, user_id)
     return JSONResponse(recently_played_tracks)
     
     

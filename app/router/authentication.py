@@ -1,6 +1,5 @@
 from fastapi import status, APIRouter
 from fastapi.responses import RedirectResponse, JSONResponse
-from starlette.requests import Request
 from app.config import settings 
 from requests.exceptions import RequestException
 from datetime import datetime, timedelta
@@ -11,7 +10,7 @@ import jwt
 
 router = APIRouter(tags=["authentication"])
 
-def getUser(access_token: str):
+def getUser(access_token: str) -> JSONResponse:
     if not access_token:
         print("Error: Access token is missing")
         return None
@@ -29,19 +28,32 @@ def getUser(access_token: str):
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 401:
-            print(f"Error: Invalid token (Status {response.status_code}).")
-            return None
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"message": "Invalid access token for accessing Spotify API service."}
+            )
         else:
-            print(f"Error: Spotify API returned unexpected status {response.status_code}.")
-            return None
+            return JSONResponse(
+                status_code=response.status_code,
+                content={"message": "Spotify API error."}
+            )
     except RequestException as e:
-        print(f"Network error while fetching user data: {e}")
-        return None
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"message": "Network error while reaching Spotify."}
+        )
 
-def refresh_access_token(refresh_token: str):
-    if not refresh_token:
-        print("Error: refresh token is missing")
-        return None
+async def refresh_access_token(user_id: str) -> JSONResponse:
+    client = clientInit()
+    db = client.spotify
+    collection = db['users']
+
+    # Filter query to mongodb
+    query_filter = {"user_id": user_id}
+
+    document = await collection.find_one(query_filter)
+
+    refresh_token = document['refresh_token']
     
     req_body = {
         'grant_type': 'refresh_token',
@@ -53,17 +65,55 @@ def refresh_access_token(refresh_token: str):
     try:
         response = requests.post(settings.TOKEN_URL, data=req_body)
 
+        # Update database
         if response.status_code == 200:
-            return response.json()
+            # Retrieving data from response
+            token_info = response.json()
+
+            update_action = {
+                "$set": {
+                    "access_token": token_info.get('access_token'),
+                    "refresh_token": token_info.get('refresh_token'),
+                    "access_token_expires_at": datetime.utcnow() + timedelta(seconds=token_info.get('expires_in'))
+                }
+            }
+
+            await db.users.update_one(
+                query_filter,
+                update_action,
+                upsert=True
+            )
+
+            # JWT
+            payload = {
+                'user_id': user_id,
+                'exp': datetime.utcnow() + timedelta(hours=1)
+            }
+
+            jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+            return JSONResponse(
+                content={
+                    "message": "Spotify session refreshed succesfully.",
+                    "auth_token": jwt_token,
+                },
+                status_code=status.HTTP_200_OK
+            )
         elif response.status_code == 400:
-            print(f"Error: Invalid refresh token (Status {response.status_code}).")
-            return None
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"message": "Invalid access token for accessing Spotify API service."}
+            )
         else:
-            print(f"Error: Spotify API returned unexpected status {response.status_code}.")
-            return None
-    except RequestException as e:
-        print(f"Network error while fetching user data: {e}")
-        return None
+            return JSONResponse(
+                status_code=response.status_code,
+                content={"message": "Spotify API error."}
+            )
+    except RequestException:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"message": "Network error while reaching Spotify."}
+        )
         
 
 @router.get("/login")
@@ -82,7 +132,7 @@ async def login():
     return RedirectResponse(auth_url)
 
 @router.get('/callback')
-async def callback(code: str | None = None, error: str | None = None):
+async def callback(code: str | None = None, error: str | None = None) -> JSONResponse:
     if error:
         return JSONResponse({"error": error}, status_code=status.HTTP_400_BAD_REQUEST)
     
@@ -139,6 +189,7 @@ async def callback(code: str | None = None, error: str | None = None):
             }
         }
 
+        # Querying to database
         result = await db.users.update_one(
             query_filter,
             update_action,
@@ -154,19 +205,15 @@ async def callback(code: str | None = None, error: str | None = None):
         # JWT
         payload = {
             'user_id': user_id,
-            'exp': datetime.utcnow() + timedelta(hours=1)
+            'exp': datetime.utcnow() + timedelta(hours=24)
         }
 
         jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
         return JSONResponse(
             content={
-                "message": "Token exchange succesfull",
+                "message": "Authentication succesfull",
                 "auth_token": jwt_token,
-                "access_token": token_info.get('access_token'),
-                "refresh_token": token_info.get('refresh_token'),
-                "expires_in": token_info.get('expires_in'),
-                "token_type": token_info.get('token_type'),
             },
             status_code=status.HTTP_200_OK
         )
