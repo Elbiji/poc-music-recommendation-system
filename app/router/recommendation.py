@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
-from starlette.requests import Request
 from app.utility.client import clientInit
 from app.router.authentication import refresh_access_token
-from app.recommendation.recommendationEngine import recommendation_processor
+from app.recommendation.recommendationEngine import recommender_instance
 from app.dependency import get_current_user_id
 from typing import Annotated
 from datetime import datetime
@@ -34,7 +33,7 @@ async def get_recommendation(user_id: Annotated[str, Depends(get_current_user_id
     # Get user's profile vector
     document = await collection.find_one(query_filter)
 
-    songs = await recommendation_processor(document['profile_vector'])
+    songs = await recommender.recommendation_processor(document['profile_vector'])
     songs = songs.to_dict('records')
 
     return JSONResponse(

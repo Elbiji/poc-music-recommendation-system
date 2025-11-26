@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
-from starlette.requests import Request
 from app.utility.client import clientInit
 from app.model.songFeatures import generate_random_feature
 from app.config import settings

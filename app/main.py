@@ -1,8 +1,6 @@
 from fastapi import FastAPI, status
-from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import RedirectResponse
 from app.router import authentication, track_history, recommendation, calculate_preference
-from app.config import settings
 
 app = FastAPI(
     title="Music Recommendation API",
@@ -14,7 +12,7 @@ app.include_router(track_history.router)
 app.include_router(recommendation.router)
 app.include_router(calculate_preference.router)
 
-app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+# app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 @app.get("/", tags=["root"])
 async def root():
