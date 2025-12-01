@@ -1,32 +1,84 @@
 # IF3070-K03-G29-AkuBagasAI-Tubes1
-> Tugas Besar 1 Dasar Inteligensi Arfisial
+> Tugas Besar Teknologi Sistem Terintegrasi (Integrated Systems Technology) II3160
 
 # About
-Ini merupakan Tugas Besar 1 mata kuliah Dasar Inteligensi Artifisial yang memiliki tujuan agar dapat memahami bagaimana cara mengimplementasikan dan mengevaluasi algoritma-algoritma local search untuk mencari solusi yang optimal dan efisien dalam pengepakan barang (bin packing problem). Optimal dan efisien ini berarti dapat menempatkan sekumpulan barang dengan ukuran yang berbeda-beda ke dalam sejumlah kontainer dengan kapasitas yang sama dengan tujuan akhir dapat menggunakan jumlah kontainer sedikit mungkin.   
+Tugas besar ini merupakan latihan untuk membuat sebuah layanan API yang didasari dengan pengembangan berbasis DDD (Domain Driven Design). Layanan yang dikembangkan pada tugas ini adalah sebuah layanan sistem rekomendasi musik yang bersifat PoC (Proof of Concept). Untuk kondisi nyatanya, layanan ini bisa akan diintegrasikan dengan suatu layanan yang lebih besar seperti aplikasi streaming musik. Layanan ini dibangun diatas framework FastAPI milik Python. Perlu digarisbawahi bahwa lagu-lagu yang diambil dari Spotify tidak memiliki feature yang bisa dibandingkan dengan feature dataset lagu di file csv sehingga saya melakukan pembuatan feature artifisial agar layanan PoC ini bisa berjalan.
 
-Dalam Tugas Besar 1 ini, kami diharapkan dapat mengimplementasikan algoritma local search seperti Simulated Annealing, Genetic Algorithm, Steepest Ascent Hill-Climbing, Stochastic Hill-Climbing, Random Restart Hill-Climbing, dan Hill-Climbing with Sideways Move. Skema yang harus dilakukan dalam proses eksperimen Tugas Besar 1 ini adalah mencatat state awal, state akhir, nilai objective function yang dicapai pada akhir eksperimen, durasi proses pencarian solusi optimal, banyaknya iterasi. banyaknya restart, frekuensi stuck, jumlah populasi, probabilitas mutasi, serta plot nilai objective function terhadap banyak iterasi yang dilalui selama proses eksperimen. Skema eksperimen ini berbeda-beda untuk setiap pendekatan algoritma local search yang telah kami lakukan dalam Tugas Besar 1 ini. 
+# Struktur Folder
+  ```bash
+    .
+    ├── pycache
+    ├── .venv
+    ├── app/
+    │ ├── model/
+    │ │ ├── __init__.py
+    │ │ └── songFeatures.py                 # Model lagu
+    │ ├── recommendation/
+    │ │ ├── __init__.py
+    │ │ ├── dataset.csv                     # Mockup data 84.000 lagu
+    │ │ └── recommendationEngine.py         # Cosine similarity
+    │ ├── router/
+    │ │ ├── __init__.py
+    │ │ ├── authentication.py               # Kebutuhan autentikasi
+    │ │ ├── calculate_preference.py         # endpoint kalkulasi vektor
+    │ │ ├── recommendation.py               # endpoint Rekomendasi lagu
+    │ │ └── track_history.py                # endpoint ETL data ke mongoDB
+    │ ├── utility/
+    │ │ ├── __init__.py
+    │ │ └── client.py                       # Singleton client mongoDB
+    │ ├── __init__.py
+    │ ├── config.py                         # Ekstrak variabel venv.
+    │ ├── dependency.py                     # Validasi JWT dan user_id
+    │ └── main.py # Entrypoint
+    ├── .dockerignore
+    ├── .env                                # Variable Lingkungan
+    ├── gitignore
+    ├── .python-version
+    ├── compose.yaml                        # Compose-up
+    ├── Dockerfile                          # Konfigurasi Docker Image
+    ├── pyproject.toml
+    ├── README.md
+    └── uv.lock
+  ```
 
-# Contributors
-| NIM       | Nama                     |Pembagian Tugas            |
-|-----------|--------------------------|---------------------------|
-| 18223115  | Bagas Noor Fadhilah      | ClI, Simulated Annealing  |
-| 18223126  | Theresia Ivana M.S.      | Genetic Algorithm         |
-| 18223140  | Raihan Muhammad Daffa    | Hill Climbing + bonus HC  |
+# Daftar Endpoint
+| Endpoint               | Fungsi                                                     |
+|------------------------|------------------------------------------------------------|
+| /login                 | Authentikasi OAuth Spotify                                 | 
+| /callback              | Penerimaan data atau callback dari autentikasi Spotify     | 
+| /track-history         | Pengembalian 20 lagu terakhir yang didengar oleh pengguna  | 
+| /calculate-preference  | Perhitungan vektor profil pengguna                         | 
+| /get-recommendation    | Pengembalian 5 lagu yang direkomendasikan oleh sistem      | 
 
-# Daftar Algoritma Pencarian Lokal 
-### Simulated Annealing
-Algoritma simulated annealing adalah sebuah algoritma pencarian lokal yang mengikuti prinsip pada fisika yaitu pada probabilitas Boltzmann yang menunjukkan bahwa state dengan energi yang rendah akan selalu memiliki probabilitas lebih tinggi untuk terisi daripada keadaan dengan energi lebih tinggi karena ketika energi tinggi partikel pada tingkat atom akan saling bertumbukan karena pada sistem yang berenergi tinggi partikel-partikel cenderung bergerak dengan kencang.
-### Steepest Ascent Hill Climbing
-Algoritma steepest ascent hill climbing adalah sebuah algoritma pencarian lokal yang bertujuan untuk menemukan solusi terbaik dengan memperbaiki current state secara iteratif. Algoritma ini diinisiasi dengan state yang acak di mana semua bin berisi item dan weightnya memiliki nilai konstan, namun secara posisi memiliki state yang tidak teratur. Algoritma ini seolah-olah sedang mendaki gunung dengan melihat semua langkah-langkah yang memungkinkan dan menemukan sebuah langkah yang memberikan pengalaman kenaikan paling tinggi (secara curam). Namun, algoritma ini memiliki kelemahan utama yaitu optimum lokal. Algoritma ini hanya melihat dari sebuah puncak (shoulder, local optimum, flat). Namun, tidak melihat puncak yang lainnya yang memiliki ketinggian yang lebih tinggi. Dan langkah-langkah lainnya terlihat menurun dan tidak bisa diraih lebih tinggi. 
-### Stochastic Hill Climbing
-Berbeda dengan steepest ascent hill climbing, stochastic hill climbing tidak mengevaluasi semua neighbor dari current state. Stochastic hill climbing hanya memilih satu neighbor yang dipilih secara acak pada setiap iterasi untuk dievaluasi. Inisiasi dari algoritma ini sama seperti steepest ascent hill climbing. Jika salah satu hasil tetangga (neighbor) secara acak memiliki nilai yang lebih baik, maka akan langsung berpindah dan langsung mengabaikan tetangga lainnya. Sebaliknya jika salah satu hasil tetangga memiliki nilai yang lebih buruk, maka akan langsung mengabaikan opsi dan harus mencari salah satu tetangga acak yang lebih baik dari sekarang (current). Kelebihan utama dari stochastic hill climbing daripada steepest hill climbing adalah algoritma ini memiliki kecepatan yang tinggi. Steepest ascent hill climbing melihat keseluruhan langkah yang ada, sementara stochastic langsung memilih salah satu opsi dengan (5 atau 10 langkah). Namun, algoritma ini lebih mudah untuk terjebak (stuck) di optimum lokal karena semua langkah acak memiliki kemungkinan besar untuk menurun, selain itu, langkah menuju puncak menjadi aneh dan tidak efisien meskipun langkahnya tetap naik. 
-### Random Restart Hill Climbing
-Jika Steepest ascent hill climbing dan stochastic hill climbing memiliki kemungkinan untuk terjebak (stuck) pada optimum lokal, maka random restart hill climbing merupakan strategi baru untuk memecahkan permasalahan yang ada pada steepest ascent dan stochastic hill climbing. Sama seperti steepest ascent hill climbing, Algoritma ini diinisiasi dengan state yang acak di mana semua bin berisi item dan weightnya memiliki nilai konstan, namun secara posisi memiliki state yang tidak teratur. Random restart hill climbing melihat semua neighbor dari current state yang dihasilkan dari pembaharuan neighbor dan bergerak ke neighbor yang lebih baik secara objective functionnya. Keunggulan utama dari random restart hill climbing adalah ketika mencapai optimum lokal, algoritma ini akan mencoba dari awal secara random di tempat lain, sehingga algoritma ini akan mustahil untuk terjebak di lokal optimum tertentu. 
-### Sideway Moves Hill Climbing
-Jika random restart hill climbing diibaratkan “menyerah sebelum berperang”, maka hill climbing with sideway moves diibaratkan “gegabah ketika berperang”. Algoritma Hill Climbing dengan Sideway Moves digunakan untuk mengatasi masalah yang spesifik yang disebut plateau. JIka berada di plateau (dataran), tidak ada pergerakan untuk menuju ke atas karena tidak ada langkah naik dan akan terjebak. Maka dari itu,  algoritma ini memperbolehkan untuk melakukan langkah menyamping (misalnya jika tidak ada tetangga yang lebih baik, tetapi tetangga tersebut memiliki nilai sama, maka boleh pindah ke tetangga tersebut.) Kondisi tersebut didapatkan dari dua hal, jika semua tetangga turun dan tidak ada peluang untuk naik, maka akan berhenti. Jika beberapa tetangga memiliki nilai yang sama maka bisa menggunakan sideways move. Namun, pergerakan menyamping memiliki limitasi bahwa tidak bisa selamanya bisa melakukan gerak menyamping (sideway moves).
-### Genetic Algorithm
-Genetic Algorithm adalah sebuah algoritma pencarian lokal yang bertujuan untuk memodifikasi gen yang terletak pada kromosom masing-masing dari individu yang terdapat pada suatu populasi. Genetic Algorithm ini merupakan algoritma yang tercipta berdasarkan referensi proses seleksi alam Charles Darwin dan Herbert Spencer, yaitu survival of the fittest. 
-
+# Prosedur Replikasi Layanan
+### Mongodb
+1. Lakukan registrasi akun MongoDB di link berikut : https://www.mongodb.com/
+2. Masuk ke dashboard MongoDB
+3. Create sebuah Cluster
+4. Buat sebuah database pada cluster tersebut dengan nama Spotify
+5. Kembali ke dashboard utama
+6. Dapatkan link database dengan tombol connect new
+7. Salin link berikut mongodb+srv://{username}:<db_password>@cluster0.owniowu.mongodb.net/?appName=Cluster0
+8. Ubah <db_password> dengan password MongoDB yang diberikan saat melakukan registrasi
+### Spotify Developer
+1. Buat akun Spotify dengan mengunjungi link berikut : https://developer.spotify.com/
+2. Masuk ke Dashboard
+3. Klik tombol Create app
+4. Masukkan field Redirect URIs dengan (http://127.0.0.1:5000/callback)
+5. Isi semua field dan klik Save
+6. Salin Client ID serta Client Secret yang diberikan oleh Spotify
+### Environment Variables
+Buatlah sebuah .env pada direktori utama dan penuhi file berikut dengan variabel dibawah ini
+  ```bash
+      DATABASE_URI={URI yang diberikan oleh MongoDB pada bagian MongoDB prosedur ke 7}
+      CLIENT_SECRET={Client Secret yang diberikan oleh Spotify}
+      CLIENT_ID={Client ID yang diberikan oleh Spotify}
+      SECRET_KEY=659ebeb96fa6a295e7725b9d55638042bea4bc250090c97555447ee73363d74a
+      AUTH_URL=https://accounts.spotify.com/authorize
+      TOKEN_URL=https://accounts.spotify.com/api/token
+      API_BASE_URL=https://api.spotify.com/v1/
+      REDIRECT_URI={URI yang didefinisikan saat pengisian kolom Redirect URIs}
+  ```
 
 # HOW TO RUN
 ### Menggunakan UV
@@ -34,40 +86,34 @@ Gunakan cara ini jika pada laptop Anda sudah ada UV
 - Untuk powershell
   ```bash
   # Kloning repositori
-  git clone https://github.com/rinmdfa25/IF3070-K03-G29-AkuBagasAI-Tubes1.git
+  git clone https://github.com/Elbiji/poc-music-recommendation-system.git
 
-  # Masuk ke direktori dimana main.py ada 
-  cd .\src\
+  # Sinkronisasi 
+  uv sync
 
-  # Setup akan dilakukan secara otomatis oleh UV
-  UV run main.py
+  # Run aplikasi
+  uv run uvicorn app.main:app --reload --port 5000 
   ```
 Untuk instalasi UV bisa dilihat di https://docs.astral.sh/uv/getting-started/installation/
-### Menggunakan ekstensi python pada VScode
+### Menggunakan Docker Compose
 Gunakan cara ini jika VScode sudah memiliki ekstensi python
 - Untuk powershell
   ```bash
   # Kloning repositori
-  git clone https://github.com/rinmdfa25/IF3070-K03-G29-AkuBagasAI-Tubes1.git
+  git clone https://github.com/Elbiji/poc-music-recommendation-system.git
+
+  # Docker compose running on background
+  docker compose up -d 
   ```
-Klik tombol "run python file" yang berada di bagian atas kanan visual editor
-### Menggunakan setup Virtual Environment
+Pastikan bahwa dalam laptop Anda ada Docker Desktop Application dan sudah dinyalakan 
+### Menggunakan Docker Build
 Gunakan cara ini jika python sudah ada dalam system environment laptop Anda. Pastikan bahwa versi python adalah  >= 3.12.X
 - Untuk powershell
   ```bash
   # Kloning repositori
-  git clone https://github.com/rinmdfa25/IF3070-K03-G29-AkuBagasAI-Tubes1.git
+  git clone https://github.com/Elbiji/poc-music-recommendation-system.git
 
-  # Inisialisasi virtual environment
-  python -m venv .venv
-
-  # Aktivasi virtual environment
-  .venv/Scripts/Activate.ps1
-  # Instalasi dependensi berdasarkan pyproject.toml pada file root
-  pip install -e .
-
-  # Masuk ke direktori dimana main.py ada  
-  cd .\src\
-  # Run projek
-  python main.py
+  # Docker run
+  docker run -d ` -p 5000:5000 ` --env-file ./.env ` poc-music-recommendation-system  
   ```
+   
