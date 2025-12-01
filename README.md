@@ -107,7 +107,6 @@ Gunakan cara ini jika VScode sudah memiliki ekstensi python
   ```
 Pastikan bahwa dalam laptop Anda ada Docker Desktop Application dan sudah dinyalakan 
 ### Menggunakan Docker Build
-Gunakan cara ini jika python sudah ada dalam system environment laptop Anda. Pastikan bahwa versi python adalah  >= 3.12.X
 - Untuk powershell
   ```bash
   # Kloning repositori
