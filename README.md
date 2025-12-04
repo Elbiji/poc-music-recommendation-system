@@ -42,13 +42,13 @@ Tugas besar ini merupakan latihan untuk membuat sebuah layanan API yang didasari
   ```
 
 # Daftar Endpoint
-| Endpoint               | Fungsi                                                     |
-|------------------------|------------------------------------------------------------|
-| /login                 | Authentikasi OAuth Spotify                                 | 
-| /callback              | Penerimaan data atau callback dari autentikasi Spotify     | 
-| /track-history         | Pengembalian 20 lagu terakhir yang didengar oleh pengguna  | 
-| /calculate-preference  | Perhitungan vektor profil pengguna                         | 
-| /get-recommendation    | Pengembalian 5 lagu yang direkomendasikan oleh sistem      | 
+|Method        | Endpoint               | Fungsi                                                     |
+|--------------|------------------------|------------------------------------------------------------|
+| GET          | /login                 | Authentikasi OAuth Spotify                                 | 
+| GET          | /callback              | Penerimaan data atau callback dari autentikasi Spotify     | 
+| GET          | /track-history         | Pengembalian 20 lagu terakhir yang didengar oleh pengguna  | 
+| GET          | /calculate-preference  | Perhitungan vektor profil pengguna                         | 
+| GET          | /get-recommendation    | Pengembalian 5 lagu yang direkomendasikan oleh sistem      | 
 
 # Prosedur Replikasi Layanan
 ### Mongodb
@@ -73,7 +73,7 @@ Buatlah sebuah .env pada direktori utama dan penuhi file berikut dengan variabel
       DATABASE_URI={URI yang diberikan oleh MongoDB pada bagian MongoDB prosedur ke 7}
       CLIENT_SECRET={Client Secret yang diberikan oleh Spotify}
       CLIENT_ID={Client ID yang diberikan oleh Spotify}
-      SECRET_KEY=659ebeb96fa6a295e7725b9d55638042bea4bc250090c97555447ee73363d74a
+      SECRET_KEY={32 Hex}
       AUTH_URL=https://accounts.spotify.com/authorize
       TOKEN_URL=https://accounts.spotify.com/api/token
       API_BASE_URL=https://api.spotify.com/v1/
