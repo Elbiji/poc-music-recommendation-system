@@ -1,10 +1,16 @@
 from fastapi import FastAPI, status
 from fastapi.responses import RedirectResponse
-from app.router import authentication, track_history, recommendation, calculate_preference
+
+from app.router import (
+    authentication,
+    calculate_preference,
+    recommendation,
+    track_history,
+)
 
 app = FastAPI(
     title="Music Recommendation API",
-    description="API for Spotify recommendation and track history."
+    description="API for Spotify recommendation and track history.",
 )
 
 app.include_router(authentication.router)
@@ -14,9 +20,11 @@ app.include_router(calculate_preference.router)
 
 # app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
+
 @app.get("/", tags=["root"])
 async def root():
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
 
 APP_MODULE = "app.main:app"
 

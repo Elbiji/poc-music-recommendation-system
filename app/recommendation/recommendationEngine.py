@@ -1,8 +1,10 @@
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
+
 
 class recommender:
     @staticmethod
@@ -12,27 +14,27 @@ class recommender:
         df_songs = pd.read_csv(f"{BASE_DIR}" + "/dataset.csv")
 
         # Reducing complexity by dropping key's column
-        df_songs = df_songs.drop(columns=['key','mode'],inplace=False)
-        print(df_songs)
+        df_songs = df_songs.drop(columns=["key", "mode"], inplace=False)
+        # print(df_songs)
 
         # define scaler and columns to be scaled
         scaler_z = StandardScaler()
-        zscore_cols = ['loudness','tempo','speechiness']
+        zscore_cols = ["loudness", "tempo", "speechiness"]
 
-        # Apply normalization 
+        # Apply normalization
         df_songs[zscore_cols] = scaler_z.fit_transform(df_songs[zscore_cols])
 
         # Setup query vector
         query_vector_dict = {
-            'danceability': InputVector.get('danceability'),
-            'energy': InputVector.get('energy'),
-            'loudness': InputVector.get('loudness'),
-            'speechiness': InputVector.get('speechiness'),
-            'acousticness': InputVector.get('acousticness'),
-            'instrumentalness': InputVector.get('instrumentalness'),
-            'liveness': InputVector.get('liveness'),
-            'valence': InputVector.get('valence'),
-            'tempo': InputVector.get('tempo')
+            "danceability": InputVector.get("danceability"),
+            "energy": InputVector.get("energy"),
+            "loudness": InputVector.get("loudness"),
+            "speechiness": InputVector.get("speechiness"),
+            "acousticness": InputVector.get("acousticness"),
+            "instrumentalness": InputVector.get("instrumentalness"),
+            "liveness": InputVector.get("liveness"),
+            "valence": InputVector.get("valence"),
+            "tempo": InputVector.get("tempo"),
         }
 
         # Define feature column for comparison
@@ -44,14 +46,14 @@ class recommender:
         # Convert the relevant dataframe features to a NumPy array
         df_vectors = df_songs[feature_cols].values
 
-        # Flatten the similarity result to make it compatible for dataframe assingments from 2D to 1D 
+        # Flatten the similarity result to make it compatible for dataframe assingments from 2D to 1D
         similarity_scores = cosine_similarity(query_array, df_vectors).flatten()
 
         # Similarity score assignment
-        df_songs['similarity'] = similarity_scores
+        df_songs["similarity"] = similarity_scores
 
         # Sort by similarity score
-        df_sorted = df_songs.sort_values(by='similarity', ascending=False)
+        df_sorted = df_songs.sort_values(by="similarity", ascending=False)
 
         # Get 5 songs that has the most similiar result
         top_5_results = df_sorted.head()
@@ -62,12 +64,12 @@ class recommender:
     async def user_preference(track_histories: dict):
         # Removing unused columns
         for track in track_histories:
-            track.pop('_id', None)
-            track.pop('album_name', None)
-            track.pop('song_name', None)
-            track.pop('artist_name', None)
-            track.pop('user_id', None)
-            track.pop('played_at', None)
+            track.pop("_id", None)
+            track.pop("album_name", None)
+            track.pop("song_name", None)
+            track.pop("artist_name", None)
+            track.pop("user_id", None)
+            track.pop("played_at", None)
 
         # Convert to a dataframe
         features = pd.DataFrame(track_histories)
@@ -76,4 +78,3 @@ class recommender:
         preference_profile = features.mean()
 
         return preference_profile.to_dict()
-    
