@@ -1,26 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from app.recommendation.recommendationEngine import recommender
-
-MOCK_DF_SONGS = pd.DataFrame(
-    {
-        "song_name": ["A", "B", "C", "D", "E"],
-        "key": [1, 2, 3, 4, 5],
-        "mode": [0, 1, 0, 1, 0],
-        "danceability": [0.1, 0.9, 0.5, 0.6, 0.7],
-        "energy": [0.2, 0.8, 0.4, 0.7, 0.3],
-        "loudness": [-10.0, -1.0, -5.0, -8.0, -3.0],
-        "speechiness": [0.05, 0.5, 0.1, 0.3, 0.2],
-        "acousticness": [0.9, 0.1, 0.5, 0.2, 0.8],
-        "instrumentalness": [0.0, 0.0, 0.0, 0.0, 0.0],
-        "liveness": [0.1, 0.1, 0.1, 0.1, 0.1],
-        "valence": [0.5, 0.5, 0.5, 0.5, 0.5],
-        "tempo": [100, 150, 120, 90, 140],
-    }
-)
+from app.router.track_history import save_to_db
 
 MOCK_QUERY_VECTOR = {
     "danceability": 0.85,
@@ -58,6 +42,24 @@ MOCK_TRACK_HISTORIES = [
         "acousticness": 0.70,
     },
 ]
+
+MOCK_DF_SONGS = pd.DataFrame(
+    {
+        "song_name": ["A", "B", "C", "D", "E"],
+        "key": [1, 2, 3, 4, 5],
+        "mode": [0, 1, 0, 1, 0],
+        "danceability": [0.1, 0.9, 0.5, 0.6, 0.7],
+        "energy": [0.2, 0.8, 0.4, 0.7, 0.3],
+        "loudness": [-10.0, -1.0, -5.0, -8.0, -3.0],
+        "speechiness": [0.05, 0.5, 0.1, 0.3, 0.2],
+        "acousticness": [0.9, 0.1, 0.5, 0.2, 0.8],
+        "instrumentalness": [0.0, 0.0, 0.0, 0.0, 0.0],
+        "liveness": [0.1, 0.1, 0.1, 0.1, 0.1],
+        "valence": [0.5, 0.5, 0.5, 0.5, 0.5],
+        "tempo": [100, 150, 120, 90, 140],
+    }
+)
+
 
 
 EXPECTED_PREFERENCE_PROFILE = {
@@ -131,3 +133,66 @@ async def test_calculate_user_preference():
         preference_profile["acousticness"]
         == EXPECTED_PREFERENCE_PROFILE["acousticness"]
     )
+
+@pytest.mark.asnycio
+@patch("app.router.track_history.generate_random_feature")
+@patch("app.router.track_history.clientInit")
+async def test_save_to_db(mock_clientInit, mock_generate_random_feature):
+
+    mock_feature = MagicMock()
+    mock_feature.danceability = 0.5
+    mock_feature.energy = 0.6
+    mock_feature.key = 5
+    mock_feature.loudness = -8.0
+    mock_feature.speechiness = 0.1
+    mock_feature.acousticness = 0.3
+    mock_feature.instrumentalness = 0.0
+    mock_feature.liveness = 0.2
+    mock_feature.valence = 0.7
+    mock_feature.tempo = 120
+    mock_feature.mode = 1
+    mock_generate_random_feature.return_value = mock_feature
+
+    test_data = {
+        "items": [
+            {
+                "track": {
+                    "name": "Test Song 1",
+                    "album": {
+                        "name": "Test Album 1",
+                        "artists": [{"name": "Test Artist 1"}]
+                    }
+                },
+                "played_at": "2024-01-15T10:30:00Z"
+            },
+            {
+                "track": {
+                    "name": "Test Song 2",
+                    "album": {
+                        "name": "Test Album 2",
+                        "artists": [{"name": "Test Artist 2"}]
+                    }
+                },
+                "played_at": "2024-01-16T14:20:00Z"
+            }
+        ]
+    }
+
+    mock_insert_result = MagicMock()
+    mock_insert_result.inserted_ids = ["id1", "id2"]
+    mock_insert_result.acknowledged = True
+
+    mock_track_history = MagicMock()
+    mock_track_history.insert_many = AsyncMock(return_value=mock_insert_result) 
+
+    mock_db = MagicMock()
+    mock_db.track_history = mock_track_history
+
+    mock_clientInit.return_value.spotify = mock_db 
+
+    await save_to_db(test_data, "test_user_123")
+
+    mock_track_history.insert_many.assert_called_once()
+
+
+    # ASSERT
