@@ -27,6 +27,15 @@ jobs:
   test:
     name: Pytest 
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URI: ${{ secrets.DATABASE_URI }}
+      CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+      CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      SECRET_KEY: ${{ SECRET_KEY }}
+      AUTH_URL: ${{ AUTH_URL }}
+      TOKEN_URL: ${{ TOKEN_URL }}
+      API_BASE_URL: ${{ API_BASE_URL }}
+      REDIRECT_URI: ${{ REDIRECT_URI }}
     steps:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
@@ -44,6 +53,15 @@ jobs:
   docker: 
     name: Docker testing 
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URI: ${{ secrets.DATABASE_URI }}
+      CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+      CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      SECRET_KEY: ${{ SECRET_KEY }}
+      AUTH_URL: ${{ AUTH_URL }}
+      TOKEN_URL: ${{ TOKEN_URL }}
+      API_BASE_URL: ${{ API_BASE_URL }}
+      REDIRECT_URI: ${{ REDIRECT_URI }}
     steps:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
@@ -57,13 +75,5 @@ jobs:
 
   # setting-dependencise:
   #  runs-on: ubuntu-latest
-  #   env:
-  #     DATABASE_URI: ${{ secrets.DATABASE_URI }}
-  #     CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-  #     CLIENT_ID: ${{ secrets.CLIENT_ID }}
-  #     SECRET_KEY: ${{ SECRET_KEY }}
-  #     AUTH_URL: ${{ AUTH_URL }}
-  #     TOKEN_URL: ${{ TOKEN_URL }}
-  #     API_BASE_URL: ${{ API_BASE_URL }}
-  #     REDIRECT_URI: ${{ REDIRECT_URI }}
+
   #   steps:
