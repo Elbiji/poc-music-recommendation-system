@@ -9,7 +9,7 @@ on:
 jobs:
   lint:
     name: Lint (ruff)
-    runs-ons: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
@@ -26,7 +26,7 @@ jobs:
 
   test:
     name: Pytest 
-    runs-ons: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
@@ -43,7 +43,7 @@ jobs:
 
   docker: 
     name: Docker testing 
-    runs: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
 
 
   # setting-dependencise:
-  #   runs-ons: ubuntu-latest
+  #  runs-on: ubuntu-latest
   #   env:
   #     DATABASE_URI: ${{ secrets.DATABASE_URI }}
   #     CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
