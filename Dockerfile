@@ -5,6 +5,11 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Passing env from dockerfile to docker container
+ARG FOO=${FOO}
+
+ENV FOO=${FOO}
+
 # Setup working directory inside container
 WORKDIR /usr/src/app
 
