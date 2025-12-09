@@ -68,7 +68,7 @@ jobs:
           -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
           -e AUTH_URL=${{ secrets.AUTH_URL }} \
           -e TOKEN_URL=${{ secrets.TOKEN_URL }} \
-          -e API_BASE_URL=${{ secrets.API_BASE_URL }}
+          -e API_BASE_URL=${{ secrets.API_BASE_URL }} \
           -e REDIRECT_URI=${{ secrets.REDIRECT_URI }} \
            poc-recommendation-system uv run pytest test/ -v --cov=app --cov-report=term-missing
 
