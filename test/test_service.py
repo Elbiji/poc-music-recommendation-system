@@ -220,6 +220,102 @@ async def test_get_calculate_preference(
 
     assert response.json()["message"] == f"Matched rows: {MOCK_MATCH_ROWS}"
 
+@patch("app.router.calculate_preference.clientInit")
+@patch(
+    "app.router.calculate_preference.recommender.user_preference",
+    new_callable=AsyncMock,
+)
+async def test_get_calculate_preference_failed(
+    mock_user_preference,
+    mock_clientInit,
+    client,
+    override_user_dependency,
+):
+    valid_document = [
+        {
+            "album_name": "a",
+            "song_name": "a",
+            "artist_name": "a",
+            "played_at": "today",
+            "user_id": "test_user_123",
+            "danceability": 0.1,
+            "energy": 0.2,
+            "key": 1,
+            "loudness": -10.0,
+            "speechiness": 0.05,
+            "acousticness": 0.9,
+            "instrumentalness": 0.0,
+            "liveness": 0.1,
+            "valence": 0.5,
+            "tempo": 100,
+            "mode": 0,
+        },
+        {
+            "album_name": "b",
+            "song_name": "b",
+            "artist_name": "b",
+            "played_at": "today",
+            "user_id": "test_user_123",
+            "danceability": 0.1,
+            "energy": 0.2,
+            "key": 1,
+            "loudness": -10.0,
+            "speechiness": 0.05,
+            "acousticness": 0.9,
+            "instrumentalness": 0.0,
+            "liveness": 0.1,
+            "valence": 0.5,
+            "tempo": 100,
+            "mode": 0,
+        },
+    ]
+
+    MOCK_MATCH_ROWS = 1
+
+    mock_update_result = MagicMock()
+    mock_update_result.acknowledged = False
+    mock_update_result.matched_count = MOCK_MATCH_ROWS
+
+    mock_user_preference.return_value = MOCK_PROFILE_VECTOR
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
+
+    # Pathing the MongoDB mockup
+    mock_cursor = AsyncMock()
+    mock_cursor.to_list = AsyncMock(return_value=valid_document)
+    mock_limit = MagicMock(return_value=mock_cursor)
+    mock_sort = MagicMock()
+    mock_sort.limit = mock_limit
+    mock_find = MagicMock()
+    mock_find.sort = MagicMock(return_value=mock_sort)
+    mock_history_collection = MagicMock()
+    mock_history_collection.find = MagicMock(return_value=mock_find)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect=lambda key: {
+            "track_history": mock_history_collection,
+            "users": mock_users_collection,
+        }[key]
+    )
+
+    mock_db.users = mock_users_collection
+
+    mock_clientInit.return_value.spotify = mock_db
+
+
+    response = client.get("/calculate-preference")
+
+    assert response.status_code == 500
+
+    mock_users_collection.update_one.assert_called_once_with(
+        {"user_id": TEST_USER_ID},
+        {"$set": {"profile_vector": MOCK_PROFILE_VECTOR}},
+        upsert=False,
+    )
+
+    assert response.json()["message"] == "Mongodb internal server error"
 
 # ========================== (/recently_played) ==========================
 

@@ -192,7 +192,23 @@ async def test_save_to_db(mock_clientInit, mock_generate_random_feature):
 
     await save_to_db(test_data, "test_user_123")
 
+    # ASSERT
+    call_args = mock_track_history.insert_many.call_args
+    inserted_data = call_args[0][0]
+
     mock_track_history.insert_many.assert_called_once()
 
+    assert len(inserted_data) == 2
 
-    # ASSERT
+    assert inserted_data[0]["song_name"] == "Test Song 1"
+    assert inserted_data[0]["artist_name"] == "Test Artist 1"
+    assert inserted_data[0]["album_name"] == "Test Album 1"
+    assert inserted_data[0]["user_id"] == "test_user_123"
+    assert inserted_data[0]["danceability"] == 0.5
+    assert inserted_data[0]["energy"] == 0.6
+    assert inserted_data[0]["played_at"] == "15/01/24" 
+
+    assert inserted_data[1]["song_name"] == "Test Song 2"
+    assert inserted_data[1]["played_at"] == "16/01/24"
+
+    assert mock_generate_random_feature.call_count == 2
