@@ -66,6 +66,6 @@ jobs:
       - name: Check out the repository to the runner
         uses: actions/checkout@v6
       - name: Build docker image
-        run: docker build -t poc-recommendation-system
+        run: docker build -t poc-recommendation-system .
       - name: Run Docker container test
         run: docker run --rm -e PYTHONUNBUFFERED=1 poc-recommendation-system uv run pytest test/ -v --cov=app --cov-report=term-missing
