@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.dependency import get_current_user_id
@@ -437,7 +438,13 @@ async def test_get_track_history_token_expired(mock_clientInit, mock_refresh_acc
 
     mock_refresh_access_token.assert_called_once_with(TEST_USER_ID)
 
-    
+# ========================== (/) ========================== 
 
+async def test_root(client):
+    response = client.get("/", follow_redirects=False)
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response.headers.get("location") == "/login"
+    
 
 

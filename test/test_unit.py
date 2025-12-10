@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import jwt
 import pandas as pd
 import pytest
+from fastapi import HTTPException
 
+from app.dependency import get_current_user_id
 from app.recommendation.recommendationEngine import recommender
 from app.router.track_history import save_to_db
 
@@ -212,3 +216,69 @@ async def test_save_to_db(mock_clientInit, mock_generate_random_feature):
     assert inserted_data[1]["played_at"] == "16/01/24"
 
     assert mock_generate_random_feature.call_count == 2
+
+def test_dependency_fail():
+    mock_request = MagicMock()
+    mock_request.headers.get.return_value = None
+    
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user_id(mock_request)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Not authenticated: Missing or invalid token"
+
+@patch("app.dependency.jwt.decode")
+def test_dependency_fail_decode(mock_jwt_decoder):
+    mock_request = MagicMock()
+    mock_request.headers.get.return_value = {
+        'Authorization': {
+            'user_id': "None",
+            'exp_date': datetime.utcnow() + timedelta(hours=1)
+        }
+    }
+
+    mock_jwt_decoder.return_value = {
+        'user_id': None,
+        'exp_date': datetime.utcnow() + timedelta(hours=1)
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user_id(mock_request)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Invalid authentication token payload"
+    
+@patch("app.dependency.jwt.decode")
+def test_dependency_succesfull(mock_jwt_decoder):
+    mock_request = MagicMock()
+    mock_request.headers.get.return_value = {
+        'Authorization': {
+            'user_id': "test_user_123",
+            'exp_date': datetime.utcnow() + timedelta(hours=1)
+        }
+    }
+
+    mock_jwt_decoder.return_value = {
+        'user_id': "test_user_123",
+        'exp_date': datetime.utcnow() + timedelta(hours=1)
+    }
+
+    result =  get_current_user_id(mock_request)
+
+    assert result == "test_user_123"
+
+@patch("app.dependency.jwt.decode", side_effect=jwt.exceptions.ExpiredSignatureError)
+def test_dependency_token_expired(mock_jwt_decoder):
+    mock_request = MagicMock()
+    mock_request.headers.get.return_value = {
+        'Authorization': {
+            'user_id': "test_user_123",
+            'exp_date': datetime.utcnow() - timedelta(hours=1)
+        }
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user_id(mock_request)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Could not validate credentials: Token expired or invalid signature"

@@ -1,8 +1,10 @@
-from jwt import PyJWTError
-from fastapi import HTTPException, status
-from starlette.requests import Request
-from app.config import settings
 import jwt
+from fastapi import HTTPException, status
+from jwt import PyJWTError
+from starlette.requests import Request
+
+from app.config import settings
+
 
 def get_current_user_id(request: Request) -> str:
     # Extract JWT from authorization header
@@ -23,8 +25,7 @@ def get_current_user_id(request: Request) -> str:
                 detail="Invalid authentication token payload"
             )
         return user_id
-    except PyJWTError as e:
-        print(e)
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials: Token expired or invalid signature"
