@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.dependency import get_current_user_id
 from app.main import app
+from app.router.authentication import callback
 
 TEST_USER_ID = 'test_user_123'
 MOCK_SONGS = [{"song": "A"}, {"song": "B"}]
@@ -24,6 +25,28 @@ MOCK_PROFILE_VECTOR = {
     "mode": 0,
 }
 
+MOCK_USER_TOKEN = {
+    "id": TEST_USER_ID,
+    "expires_in": 3600,
+    "access_token": "ABCDEFG",
+    "refresh_token": "ABCDEFG",
+}
+
+MOCK_USER_TOKEN_CORRUPTED = {
+    "id": TEST_USER_ID,
+    "expires_in": None,
+    "access_token": "ABCDEFG",
+    "refresh_token": "ABCDEFG",
+}
+
+MOCK_USER_DATA_FROM_SPOTIFY = {
+    "display_name": "MEBOMBO",
+    "explicit_content": True,
+    "followers": 26,
+    "type": None,
+    "product": "premium",
+    "email": "mebombo@gmail.com"
+}
 
 # Setup TestClient so testing can call internal endpoints
 @pytest.fixture
@@ -186,13 +209,15 @@ async def test_get_calculate_preference(
     mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
 
     # Pathing the MongoDB mockup
-    mock_cursor = AsyncMock()
+    mock_cursor = MagicMock()
     mock_cursor.to_list = AsyncMock(return_value=valid_document)
-    mock_limit = MagicMock(return_value=mock_cursor)
+
     mock_sort = MagicMock()
-    mock_sort.limit = mock_limit
+    mock_sort.limit = MagicMock(return_value=mock_cursor)
+
     mock_find = MagicMock()
     mock_find.sort = MagicMock(return_value=mock_sort)
+
     mock_history_collection = MagicMock()
     mock_history_collection.find = MagicMock(return_value=mock_find)
 
@@ -283,13 +308,15 @@ async def test_get_calculate_preference_failed(
     mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
 
     # Pathing the MongoDB mockup
-    mock_cursor = AsyncMock()
+    mock_cursor = MagicMock()
     mock_cursor.to_list = AsyncMock(return_value=valid_document)
-    mock_limit = MagicMock(return_value=mock_cursor)
+
     mock_sort = MagicMock()
-    mock_sort.limit = mock_limit
+    mock_sort.limit = MagicMock(return_value=mock_cursor)
+
     mock_find = MagicMock()
     mock_find.sort = MagicMock(return_value=mock_sort)
+
     mock_history_collection = MagicMock()
     mock_history_collection.find = MagicMock(return_value=mock_find)
 
@@ -446,5 +473,129 @@ async def test_root(client):
     assert response.status_code == status.HTTP_302_FOUND
     assert response.headers.get("location") == "/login"
     
+
+# ========================== (/login) ========================== 
+
+async def test_login(client):
+    response = client.get("/login", follow_redirects=False)
+
+    assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
+
+# ========================== (/callback) ========================== 
+
+# @patch("app.router.track_history.save_to_db", new_callable=AsyncMock)
+# @patch("app.router.track_history.requests.get")
+# @patch("app.router.track_history.refresh_access_token", new_callable=AsyncMock)
+@patch("app.router.track_history.clientInit")
+@patch("app.router.authentication.requests.post")
+async def test_callback_400(mock_post, client):
+
+    response = await callback(error="error")
+
+    assert response.status_code == 400
+
+@patch("app.router.authentication.settings")
+@patch("app.router.track_history.clientInit")
+@patch("app.router.authentication.requests.post")
+async def test_callback_501(mock_post, client, mock_settings):
+
+    mock_settings.REDIRECT_URI = "http://localhost:8000/callback"
+    mock_settings.CLIENT_ID = "test_client_id"
+    mock_settings.CLIENT_SECRET = "test_client_secret"
+    mock_settings.TOKEN_URL = "api/token"
+
+    mock_response = MagicMock()
+    mock_response.status_code = 501
+    mock_response.json.return_value = MOCK_USER_TOKEN
+
+    mock_post.return_value = mock_response
+
+    response = await callback(code="code")
+
+    assert response.status_code == 501
+
+@patch("app.router.authentication.jwt.encode")
+@patch("app.router.authentication.getUser")
+@patch("app.router.authentication.settings")
+@patch("app.router.authentication.clientInit")
+@patch("app.router.authentication.requests.post")
+async def test_callback_500(mock_post, mock_clientInit, mock_settings, mock_getUser, mock_encode):
+
+    mock_settings.REDIRECT_URI = "http://localhost:8000/callback"
+    mock_settings.CLIENT_ID = "test_client_id"
+    mock_settings.CLIENT_SECRET = "test_client_secret"
+    mock_settings.TOKEN_URL = "api/token"
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = MOCK_USER_TOKEN
+
+    mock_getUser.return_value = MOCK_USER_DATA_FROM_SPOTIFY 
+
+    mock_post.return_value = mock_response
+
+    mock_update_result = MagicMock()
+    mock_update_result.acknowledged = False
+    mock_update_result.matched_count = 1
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect =lambda key: {
+            "users": mock_users_collection
+        }[key]
+    )
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    mock_encode.return_value = "encoded_payload"
+
+    response = await callback(code="code")
+
+    assert response.status_code == 500
+
+@patch("app.router.authentication.jwt.encode")
+@patch("app.router.authentication.getUser")
+@patch("app.router.authentication.settings")
+@patch("app.router.track_history.clientInit")
+@patch("app.router.authentication.requests.post")
+async def test_callback_200(mock_post, mock_clientInit, mock_settings, mock_getUser, mock_encode):
+
+    mock_settings.REDIRECT_URI = "http://localhost:8000/callback"
+    mock_settings.CLIENT_ID = "test_client_id"
+    mock_settings.CLIENT_SECRET = "test_client_secret"
+    mock_settings.TOKEN_URL = "api/token"
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = MOCK_USER_TOKEN
+
+    mock_getUser.return_value = MOCK_USER_DATA_FROM_SPOTIFY 
+
+    mock_post.return_value = mock_response
+
+    mock_update_result = MagicMock()
+    mock_update_result.acknowledged = True
+    mock_update_result.matched_count = 1
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect =lambda key: {
+            "users": mock_users_collection
+        }[key]
+    )
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    mock_encode.return_value = "encoded_payload"
+
+    response = await callback(code="code")
+
+    assert response.status_code == 200
 
 

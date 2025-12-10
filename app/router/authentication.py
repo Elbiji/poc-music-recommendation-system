@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import jwt
 import requests
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from requests.exceptions import RequestException
 
@@ -38,9 +38,9 @@ def getUser(access_token: str) -> JSONResponse:
                 content={"message": "Spotify API error."},
             )
     except RequestException:
-        return JSONResponse(
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"message": "Network error while reaching Spotify."},
+            detail= "Network error while reaching Spotify."
         )
 
 
@@ -80,7 +80,7 @@ async def refresh_access_token(user_id: str) -> JSONResponse:
                 }
             }
 
-            await db.users.update_one(query_filter, update_action, upsert=True)
+            await collection.update_one(query_filter, update_action, upsert=True)
 
             # JWT
             payload = {
@@ -110,9 +110,9 @@ async def refresh_access_token(user_id: str) -> JSONResponse:
                 content={"message": "Spotify API error."},
             )
     except RequestException:
-        return JSONResponse(
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"message": "Network error while reaching Spotify."},
+            detail="Network error while reaching Spotify."
         )
 
 
@@ -164,15 +164,12 @@ async def callback(code: str | None = None, error: str | None = None) -> JSONRes
         # Save user Spotify's credential and tokens to db
         client = clientInit()
         db = client.spotify
+        collection = db["users"]
 
         # Query filter
         query_filter = {"user_id": user_id}
 
-        if expires_in:
-            # Use datetime.utcnow() for consistency
-            access_token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-        else:
-            access_token_expires_at = None
+        access_token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
 
         update_action = {
             "$set": {
@@ -193,7 +190,7 @@ async def callback(code: str | None = None, error: str | None = None) -> JSONRes
         }
 
         # Querying to database
-        result = await db.users.update_one(query_filter, update_action, upsert=True)
+        result = await collection.update_one(query_filter, update_action, upsert=True)
 
         if not result.acknowledged:
             return JSONResponse(

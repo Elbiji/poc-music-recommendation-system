@@ -5,10 +5,14 @@ import jwt
 import pandas as pd
 import pytest
 from fastapi import HTTPException
+from requests.exceptions import RequestException
 
 from app.dependency import get_current_user_id
 from app.recommendation.recommendationEngine import recommender
+from app.router.authentication import getUser, refresh_access_token
 from app.router.track_history import save_to_db
+
+TEST_USER_ID = 'test_user_123'
 
 MOCK_QUERY_VECTOR = {
     "danceability": 0.85,
@@ -20,6 +24,22 @@ MOCK_QUERY_VECTOR = {
     "liveness": 0.1,
     "valence": 0.5,
     "tempo": 155,
+}
+
+MOCK_USER_DATA_FROM_SPOTIFY = {
+    "user_id": TEST_USER_ID,
+    "expires_in": 3600,
+    "access_token": "ABCDEFG",
+    "refresh_token": "ABCDEFG",
+}
+
+
+MOCK_USER_DATA = {
+    "user_id": TEST_USER_ID,
+    "access_token_expires_at": datetime.utcnow() + timedelta(hours=1),
+    "access_token": "ABCDEFG",
+    "refresh_token": "ABCDEFG",
+    "profile_vector": [0.1, 0.2, 0.3],
 }
 
 MOCK_TRACK_HISTORIES = [
@@ -78,6 +98,7 @@ def recommender_fixture():
     recommender_instance = recommender()
     yield recommender_instance
 
+# ========================== (Recommendation Unit Testing) ========================== 
 
 # Mark test as async
 @pytest.mark.asyncio
@@ -137,6 +158,8 @@ async def test_calculate_user_preference():
         preference_profile["acousticness"]
         == EXPECTED_PREFERENCE_PROFILE["acousticness"]
     )
+
+# ========================== (Generate Random Unit Testing) ========================== 
 
 @pytest.mark.asnycio
 @patch("app.router.track_history.generate_random_feature")
@@ -217,6 +240,8 @@ async def test_save_to_db(mock_clientInit, mock_generate_random_feature):
 
     assert mock_generate_random_feature.call_count == 2
 
+# ========================== (Dependency Unit Testing) ========================== 
+
 def test_dependency_fail():
     mock_request = MagicMock()
     mock_request.headers.get.return_value = None
@@ -282,3 +307,180 @@ def test_dependency_token_expired(mock_jwt_decoder):
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Could not validate credentials: Token expired or invalid signature"
+
+# ========================== (Authentication Unit Testing) ========================== 
+
+def test_get_user_no_access_token():
+    mock_access_token = None
+
+    user = getUser(mock_access_token)
+
+    assert  user is None
+
+@patch("app.router.authentication.requests.get")
+def test_get_user_token_valid_200(mock_get):
+    mock_access_token = "FAKE TOKEN"
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = MOCK_USER_DATA
+    mock_get.return_value = mock_response
+
+    user = getUser(mock_access_token)
+
+    assert user["user_id"] == TEST_USER_ID
+    assert user["access_token"] == MOCK_USER_DATA["access_token"]
+
+
+@patch("app.router.authentication.requests.get")
+def test_get_user_token_valid_401(mock_get):
+    mock_access_token = "FAKE TOKEN"
+    mock_response = MagicMock()
+    mock_response.status_code = 401
+    mock_response.json.return_value = MOCK_USER_DATA
+    mock_get.return_value = mock_response
+
+    user = getUser(mock_access_token)
+
+    assert user.status_code == 401
+
+@patch("app.router.authentication.requests.get")
+def test_get_user_token_valid_500(mock_get):
+    mock_access_token = "FAKE TOKEN"
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.json.return_value = MOCK_USER_DATA
+    mock_get.return_value = mock_response
+
+    user = getUser(mock_access_token)
+
+    assert user.status_code == 500
+
+@patch("app.router.authentication.requests.get", side_effect=RequestException)
+def test_get_user_token_valid_Request_Exception(mock_get):
+    mock_access_token = "FAKE TOKEN"
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.json.return_value = MOCK_USER_DATA
+    mock_get.return_value = mock_response
+
+    with pytest.raises(HTTPException) as exc_info:
+        getUser(mock_access_token)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "Network error while reaching Spotify."
+
+@patch("app.router.authentication.requests.post")
+@patch("app.router.authentication.clientInit")
+async def test_refresh_access_token_400(mock_clientInit, mock_post):
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+
+    mock_post.return_value = mock_response
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.find_one = AsyncMock(return_value=MOCK_USER_DATA)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect=lambda key: {
+            "users": mock_users_collection,
+        }[key]
+    )
+
+    mock_db.users = mock_users_collection
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    response = await refresh_access_token(TEST_USER_ID)
+
+    assert response.status_code == 401
+
+@patch("app.router.authentication.requests.post")
+@patch("app.router.authentication.clientInit")
+async def test_refresh_access_token_500(mock_clientInit, mock_post):
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+
+    mock_post.return_value = mock_response
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.find_one = AsyncMock(return_value=MOCK_USER_DATA)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect=lambda key: {
+            "users": mock_users_collection,
+        }[key]
+    )
+
+    mock_db.users = mock_users_collection
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    response = await refresh_access_token(TEST_USER_ID)
+
+    assert response.status_code == 500
+
+@patch("app.router.authentication.requests.post", side_effect=RequestException)
+@patch("app.router.authentication.clientInit")
+async def test_refresh_access_token_503(mock_clientInit, mock_post):
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+
+    mock_post.return_value = mock_response
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.find_one = AsyncMock(return_value=MOCK_USER_DATA)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect=lambda key: {
+            "users": mock_users_collection,
+        }[key]
+    )
+
+    mock_db.users = mock_users_collection
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    with pytest.raises(HTTPException) as exc_info:
+        await refresh_access_token(TEST_USER_ID)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "Network error while reaching Spotify."
+
+@patch("app.router.authentication.requests.post")
+@patch("app.router.authentication.jwt.encode")
+@patch("app.router.authentication.clientInit")
+async def test_refresh_access_token_200(mock_clientInit, mock_encode, mock_post):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = MOCK_USER_DATA_FROM_SPOTIFY
+
+    mock_update_result = MagicMock()
+    mock_update_result.acknowledged = True
+    mock_update_result.matched_count = 1
+
+    mock_post.return_value = mock_response
+
+    mock_encode.return_value = "encoded_payload"  
+
+    mock_users_collection = MagicMock()
+    mock_users_collection.find_one = AsyncMock(return_value=MOCK_USER_DATA)
+    mock_users_collection.update_one = AsyncMock(return_value=mock_update_result)
+
+    mock_db = MagicMock()
+    mock_db.__getitem__ = MagicMock(
+        side_effect=lambda key: {
+            "users": mock_users_collection,
+        }[key]
+    )
+
+    mock_db.users = mock_users_collection
+
+    mock_clientInit.return_value.spotify = mock_db
+
+    response = await refresh_access_token(TEST_USER_ID)
+
+    assert response.status_code == 200
+
