@@ -486,18 +486,16 @@ async def test_login(client):
 # @patch("app.router.track_history.save_to_db", new_callable=AsyncMock)
 # @patch("app.router.track_history.requests.get")
 # @patch("app.router.track_history.refresh_access_token", new_callable=AsyncMock)
-@patch("app.router.track_history.clientInit")
 @patch("app.router.authentication.requests.post")
-async def test_callback_400(mock_post, client):
+async def test_callback_400(mock_post):
 
     response = await callback(error="error")
 
     assert response.status_code == 400
 
 @patch("app.router.authentication.settings")
-@patch("app.router.track_history.clientInit")
 @patch("app.router.authentication.requests.post")
-async def test_callback_501(mock_post, client, mock_settings):
+async def test_callback_501(mock_post, mock_settings):
 
     mock_settings.REDIRECT_URI = "http://localhost:8000/callback"
     mock_settings.CLIENT_ID = "test_client_id"
@@ -559,7 +557,7 @@ async def test_callback_500(mock_post, mock_clientInit, mock_settings, mock_getU
 @patch("app.router.authentication.jwt.encode")
 @patch("app.router.authentication.getUser")
 @patch("app.router.authentication.settings")
-@patch("app.router.track_history.clientInit")
+@patch("app.router.authentication.clientInit")
 @patch("app.router.authentication.requests.post")
 async def test_callback_200(mock_post, mock_clientInit, mock_settings, mock_getUser, mock_encode):
 
