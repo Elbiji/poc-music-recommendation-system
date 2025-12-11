@@ -1,4 +1,4 @@
-# IF3070-K03-G29-AkuBagasAI-Tubes1
+# II3160
 > Tugas Besar Teknologi Sistem Terintegrasi (Integrated Systems Technology) II3160
 
 # About
@@ -6,39 +6,46 @@ Tugas besar ini merupakan latihan untuk membuat sebuah layanan API yang didasari
 
 # Struktur Folder
   ```bash
-    .
-    ├── pycache
-    ├── .venv
-    ├── app/
-    │ ├── model/
-    │ │ ├── __init__.py
-    │ │ └── songFeatures.py                 # Model lagu
-    │ ├── recommendation/
-    │ │ ├── __init__.py
-    │ │ ├── dataset.csv                     # Mockup data 84.000 lagu
-    │ │ └── recommendationEngine.py         # Cosine similarity
-    │ ├── router/
-    │ │ ├── __init__.py
-    │ │ ├── authentication.py               # Kebutuhan autentikasi
-    │ │ ├── calculate_preference.py         # endpoint kalkulasi vektor
-    │ │ ├── recommendation.py               # endpoint Rekomendasi lagu
-    │ │ └── track_history.py                # endpoint ETL data ke mongoDB
-    │ ├── utility/
-    │ │ ├── __init__.py
-    │ │ └── client.py                       # Singleton client mongoDB
-    │ ├── __init__.py
-    │ ├── config.py                         # Ekstrak variabel venv.
-    │ ├── dependency.py                     # Validasi JWT dan user_id
-    │ └── main.py # Entrypoint
-    ├── .dockerignore
-    ├── .env                                # Variable Lingkungan
-    ├── gitignore
-    ├── .python-version
-    ├── compose.yaml                        # Compose-up
-    ├── Dockerfile                          # Konfigurasi Docker Image
-    ├── pyproject.toml
-    ├── README.md
-    └── uv.lock
+      .
+      ├── .venv
+      ├── github/
+      │ ├── workflows/
+      │ │ ├── ci.yml # Konfigurasi git action
+      ├── app/
+      │ ├── model/
+      │ │ ├── __init__.py
+      │ │ └── songFeatures.py # Model lagu
+      │ ├── recommendation/
+      │ │ ├── __init__.py
+      │ │ ├── dataset.csv # Mockup data 84.000 lagu
+      │ │ └── recommendationEngine.py # Cosine similarity
+      │ ├── router/
+      │ │ ├── __init__.py
+      │ │ ├── authentication.py # Kebutuhan autentikasi
+      │ │ ├── calculate_preference.py # endpoint kalkulasi vektor
+      │ │ ├── recommendation.py # endpoint Rekomendasi lagu
+      │ │ └── track_history.py # endpoint ETL data ke mongoDB
+      │ ├── utility/
+      │ │ ├── __init__.py
+      │ │ └── client.py # Singleton client mongoDB
+      │ ├── __init__.py
+      │ ├── config.py # Ekstrak variabel venv.
+      │ ├── dependency.py # Validasi JWT dan user_id
+      │ └── main.py # Entrypoint
+      ├── test/
+      │ ├── __init__.py
+      │ ├── test_model.py # testing model
+      │ ├── test_service.py # testing layanan endpoint
+      │ └── test_unit.py # testing fungsi
+      ├── .dockerignore
+      ├── .env # Variable Lingkungan
+      ├── gitignore
+      ├── .python-version
+      ├── compose.yaml # Compose-up
+      ├── Dockerfile # Konfigurasi Docker Image
+      ├── pyproject.toml
+      ├── README.md
+      └── uv.lock
   ```
 
 # Daftar Endpoint
@@ -68,7 +75,7 @@ Tugas besar ini merupakan latihan untuk membuat sebuah layanan API yang didasari
 5. Isi semua field dan klik Save
 6. Salin Client ID serta Client Secret yang diberikan oleh Spotify
 ### Environment Variables
-Buatlah sebuah .env pada direktori utama dan penuhi file berikut dengan variabel dibawah ini
+Buatlah sebuah .env pada direktori root dan penuhi file berikut dengan variabel dibawah ini
   ```bash
       DATABASE_URI={URI yang diberikan oleh MongoDB pada bagian MongoDB prosedur ke 7}
       CLIENT_SECRET={Client Secret yang diberikan oleh Spotify}
@@ -96,7 +103,6 @@ Gunakan cara ini jika pada laptop Anda sudah ada UV
   ```
 Untuk instalasi UV bisa dilihat di https://docs.astral.sh/uv/getting-started/installation/
 ### Menggunakan Docker Compose
-Gunakan cara ini jika VScode sudah memiliki ekstensi python
 - Untuk powershell
   ```bash
   # Kloning repositori
@@ -115,4 +121,5 @@ Pastikan bahwa dalam laptop Anda ada Docker Desktop Application dan sudah dinyal
   # Docker run
   docker run -d ` -p 5000:5000 ` --env-file ./.env ` poc-music-recommendation-system  
   ```
+  Pastikan bahwa dalam laptop Anda ada Docker Desktop Application dan sudah dinyalakan 
    
